@@ -1,0 +1,22 @@
+{
+  "backup": {
+    "folder": "./backup"
+  },
+  "oauth": {
+    "redirect_uri": "http://localhost:8888/callback"
+  },
+  "scopes": {
+    "export": [
+      "user-read-private",
+      "user-read-email",
+      "user-library-read",
+      "playlist-read-private",
+      "playlist-read-collaborative",
+    ],
+    "import": [
+      "user-library-modify",
+      "playlist-modify-public",
+      "playlist-modify-private",
+    ]
+  }
+}
