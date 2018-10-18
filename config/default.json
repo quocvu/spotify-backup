@@ -1,6 +1,7 @@
 {
   "backup": {
-    "folder": "./backup"
+    "folder": "./backup",
+    "batch_size": "10"
   },
   "oauth": {
     "redirect_uri": "http://localhost:8888/callback"

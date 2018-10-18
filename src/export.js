@@ -24,17 +24,20 @@ backup();
 async function backup() {
   try {
     const spotify = await lib.authenticate();
+    /*
     const [ pl, library ] = await Promise.all([
       await getPlaylists(spotify),
       await getLibrary(spotify)
     ]);
+    */
 
-    console.log(pl)
+    const pl = await getPlaylists(spotify);
+    const library = await getLibrary(spotify);
 
     const playlists = [];
     for (p of pl) {
       let tracks = await getTracks(spotify, p);
-      p.tracks.items = tracks;
+      p.tracks = tracks;
       playlists.push(p);
     }
 
@@ -61,18 +64,18 @@ async function getPlaylists(spotify) {
 
     return playlists.map(p => {
       let playlist = _.pick(p, [ 'id', 'name', 'collaborative', 'description', 'uri' ]);
-      playlist.tracks = { total: p.tracks.total };
+      playlist.tracks = p.tracks.total;
       return playlist;
     });
   }
 }
 
 async function getTracks(spotify, playlist) {
-  console.log('Getting playlist', playlist.id, 'with', playlist.tracks.total, 'tracks');
+  console.log('Getting playlist', playlist.id, 'with', playlist.tracks, 'tracks');
 
   const tracks = await lib.paginate(async(limit, offset) => {
       return await spotify.getPlaylistTracks(playlist.id, { limit, offset });
-    }, 100, playlist.tracks.total);
+    }, 100, playlist.tracks);
 
   console.log('Got', tracks.length, 'tracks for playlist', playlist.id);
 
@@ -86,17 +89,6 @@ async function getLibrary(spotify) {
   let tracks = await spotify.getMySavedTracks();
 
   if (albums.statusCode == 200 && tracks.statusCode == 200) {
-    /*
-    const [a, t] = await Promise.all([
-      lib.paginate(async(limit, offset) => {
-        return await spotify.getMySavedAlbums({ limit, offset });
-      }, 50, albums.body.total),
-      lib.paginate(async(limit, offset) => {
-        return await spotify.getMySavedTracks({ limit, offset });
-      }, 50, tracks.body.total),
-    ]);
-    */
-
     let a = await lib.paginate(async(limit, offset) => {
       return await spotify.getMySavedAlbums({ limit, offset });
     }, 50, albums.body.total);
