@@ -15,10 +15,8 @@ module.exports = {
     return spotify;
   },
 
-  filename() {
-    return config.get('backup.folder') + '/'
-      + randomstring.generate(16)
-      + '.json';
+  filename(folder) {
+    return folder + '/' + randomstring.generate(16) + '.json';
   },
 
   // f is function taking 2 params: limit and offset
