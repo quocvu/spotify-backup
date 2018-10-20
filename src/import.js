@@ -39,6 +39,8 @@ async function restore() {
     }
 
     if (command.playlists && _.has(backup, 'playlists')) {
+      const removed = await removePlaylists(spotify);
+
       for (pl of backup.playlists) {
         await addPlaylist(spotify, me, pl);
       }
@@ -76,8 +78,29 @@ async function addTracks(spotify, tracks) {
   }
 }
 
+async function removePlaylists(spotify) {
+  console.log('Cleanup existing playlists'.green);
+
+  let res = await spotify.getUserPlaylists();
+
+  if (res.statusCode == 200) {
+    console.log('Retrieving', res.body.total, 'playlists');
+    const playlists = await lib.paginate(async (limit, offset) => {
+        return await spotify.getUserPlaylists({ limit, offset });
+      }, 50, res.body.total);
+
+    console.log('Got', playlists.length, 'playlists');
+
+    for (p of playlists) {
+      console.log('Removing playlist', p.id);
+      await spotify.unfollowPlaylist(p.id);
+    }
+  }
+}
+
+
 async function addPlaylist(spotify, me, playlist) {
-  console.log('Importing playlists', playlist.name);
+  console.log('Importing playlists', playlist.name, 'with', playlist.tracks.length, 'tracks');
 
   const pl = await spotify.createPlaylist(me.id, playlist.name, {
     public: playlist.public,
@@ -85,11 +108,13 @@ async function addPlaylist(spotify, me, playlist) {
     description: _.has(playlist, 'description') ? _.has(playlist, 'description') : '',
   });
 
-  if (pl.statusCode == 200) {
-    const tracks = playlist.tracks.items;
+  if (pl.statusCode == 200 || pl.statusCode == 201) {
+    console.log('created playlist', pl.body.id, 'for', playlist.name);
+
+    const tracks = playlist.tracks;
     while (tracks.length) {
-      const batch = a.splice(0, 10).map(t => t.uri );
-      await spotify.addTracksToPlaylist(playlist, batch);
+      const batch = tracks.splice(0, 10).map(t => t.uri );
+      await spotify.addTracksToPlaylist(pl.body.id, batch);
     }
   }
 

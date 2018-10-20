@@ -24,26 +24,22 @@ backup();
 async function backup() {
   try {
     const spotify = await lib.authenticate();
-    /*
-    const [ pl, library ] = await Promise.all([
-      await getPlaylists(spotify),
-      await getLibrary(spotify)
-    ]);
-    */
 
-    const pl = await getPlaylists(spotify);
-    const library = await getLibrary(spotify);
+    const data = {};
 
-    const playlists = [];
-    for (p of pl) {
-      let tracks = await getTracks(spotify, p);
-      p.tracks = tracks;
-      playlists.push(p);
+    if (command.playlists) {
+      const playlists = await getPlaylists(spotify);
+      data.playlists = playlists;
+    }
+
+    if (command.library) {
+      const library = await getLibrary(spotify);
+      data.library = library;
     }
 
     const backupFilename = lib.filename(folder);
     console.log('Storing backup to', backupFilename);
-    fs.writeFileSync(backupFilename, JSON.stringify({ playlists, library }, null, '  '));
+    fs.writeFileSync(backupFilename, JSON.stringify(data, null, '  '));
   } catch (ex) {
     console.log(ex);
   }
@@ -62,22 +58,25 @@ async function getPlaylists(spotify) {
 
     console.log('Got', playlists.length, 'playlists');
 
-    return playlists.map(p => {
-      let playlist = _.pick(p, [ 'id', 'name', 'collaborative', 'description', 'uri' ]);
-      playlist.tracks = p.tracks.total;
-      return playlist;
-    });
+    const results = [];
+    for (p of playlists) {
+      let pl = _.pick(p, [ 'id', 'name', 'collaborative', 'description', 'uri' ]);
+      pl.tracks = await getTracks(spotify, p.id, p.tracks.total);
+      results.push(pl);
+    }
+
+    return results;
   }
 }
 
-async function getTracks(spotify, playlist) {
-  console.log('Getting playlist', playlist.id, 'with', playlist.tracks, 'tracks');
+async function getTracks(spotify, playlistId, numTracks) {
+  console.log('Getting playlist', playlistId, 'with', numTracks, 'tracks');
 
   const tracks = await lib.paginate(async(limit, offset) => {
-      return await spotify.getPlaylistTracks(playlist.id, { limit, offset });
-    }, 100, playlist.tracks);
+      return await spotify.getPlaylistTracks(playlistId, { limit, offset });
+    }, 100, numTracks);
 
-  console.log('Got', tracks.length, 'tracks for playlist', playlist.id);
+  console.log('Got', tracks.length, 'tracks for playlist', playlistId);
 
   return tracks.map(t => { return { id: t.track.id, uri: t.track.uri, name: t.track.name }});
 }
